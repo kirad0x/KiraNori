@@ -1,10 +1,10 @@
-Import SwiftUI
+import SwiftUI
 
 @main
-struct KiraNoriAppMain: App {
+struct KiraNoriApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView() // Az önce verdiğimiz ana ekranı burada çağırır
+            ContentView()
         }
     }
 }
