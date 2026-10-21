@@ -20,7 +20,7 @@ jobs:
         mkdir -p build/KiraNori.app
         swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) -target arm64-apple-ios16.0 -emit-executable -Xlinker -rpath -Xlinker /System/Library/Frameworks -Xlinker -rpath -Xlinker /usr/lib/swift -o build/KiraNori.app/KiraNori ContentView.swift
 
-    - name: Generate Info.plist and Package
+    - name: Package IPA
       run: |
         echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleExecutable</key><string>KiraNori</string><key>CFBundleIdentifier</key><string>com.kirad0x.KiraNori</string><key>CFBundleName</key><string>KiraNori</string><key>CFBundleDisplayName</key><string>KiraNori</string><key>CFBundleVersion</key><string>1.0</string><key>CFBundleShortVersionString</key><string>1.0</string><key>CFBundlePackageType</key><string>APPL</string><key>LSRequiresIPhoneOS</key><true/><key>MinimumOSVersion</key><string>16.0</string><key>UILaunchScreen</key><dict/></dict></plist>' > build/KiraNori.app/Info.plist
         echo "APPL????" > build/KiraNori.app/PkgInfo
@@ -32,5 +32,5 @@ jobs:
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: kira_zipipa
-        path: KiraNori1.ipa
+        name: KiraNori-IPA
+        path: ${{ github.workspace }}/KiraNori.ipa
