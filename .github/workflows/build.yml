@@ -15,63 +15,19 @@ jobs:
       with:
         xcode-version: '26.0.1'
 
-    - name: Compile and Package App
+    - name: Build App
       run: |
-        echo "KiraNori Pro derleniyor..."
-        
-        # Uygulama paket dizinini oluştur
         mkdir -p build/KiraNori.app
+        swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) -target arm64-apple-ios15.0 -emit-executable -o build/KiraNori.app/KiraNori ContentView.swift
         
-        # Swift dosyalarını iOS arm64 mimarisi için derle
-        swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
-               -target arm64-apple-ios15.0 \
-               -emit-executable \
-               -o build/KiraNori.app/KiraNori \
-               ContentView.swift
-               
-        # Varsa Info.plist ve Assets dosyalarını kopyala, yoksa otomatik oluştur
-        if [ -f "Info.plist" ]; then
-          cp Info.plist build/KiraNori.app/Info.plist
-        else
-          cat << 'EOF' > build/KiraNori.app/Info.plist
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleIdentifier</key>
-    <string>com.kirad0x.KiraNori</string>
-    <key>CFBundleName</key>
-    <string>KiraNori</string>
-    <key>CFBundleVersion</key>
-    <string>1.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
-    <key>UILaunchScreen</key>
-    <dict/>
-    <key>UISupportedInterfaceOrientations</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-    </array>
-</dict>
-</plist>
-EOF
-        fi
-
-        if [ -d "Assets.xcassets" ]; then
-          cp -r Assets.xcassets build/KiraNori.app/
-        fi
+        echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.kirad0x.KiraNori</string><key>CFBundleName</key><string>KiraNori</string><key>CFBundleVersion</key><string>1.0</string><key>CFBundleShortVersionString</key><string>1.0</string><key>CFBundlePackageType</key><string>APPL</string><key>LSRequiresIPhoneOS</key><true/></dict></plist>' > build/KiraNori.app/Info.plist
 
         echo "APPL????" > build/KiraNori.app/PkgInfo
         
-        # Payload yapısını kur ve IPA olarak paketle
         mkdir -p Payload
         cp -r build/KiraNori.app Payload/
         zip -r KiraNori.ipa Payload
-        
+
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
