@@ -1,581 +1,634 @@
 import SwiftUI
+import PhotosUI
 
-// MARK: - 1. ANA UYGULAMA GİRİŞİ VE DİNAMİK ARKA PLAN
 struct ContentView: View {
-    @State private var isJailbroken: Bool = false
-    @State private var showModeSelector: Bool = true
-    @State private var currentWallpaper: String = "wallpaper_default"
-    @State private var wallpaperBrightness: Double = 0.5
-    @State private var selectedTab: Int = 0
+    // MARK: - State Variables
+    @State private var enableTweaks: Bool = true
+    @State private var restoreRootFS: Bool = false
+    @State private var selectedThemeColor: Color = .purple
+    
+    // Wallpaper States
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var bgImage: UIImage? = nil
+    @State private var showCropSheet: Bool = false
+    @State private var rawImageToCrop: UIImage? = nil
+    
+    // Active Navigation Sheets
+    @State private var activeSheet: AppScreen? = nil
+    
+    enum AppScreen: Identifiable {
+        case fileManager
+        case vmManager
+        case terminal
+        case tweakCenter
+        case jitManager
+        case themes
+        case settings
+        case credits
+        
+        var id: Int { hashValue }
+    }
 
     var body: some View {
         ZStack {
-            // Dinamik Aydınlatmalı Arka Plan Görseli
-            Image(currentWallpaper)
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .brightness(wallpaperBrightness - 0.5)
-                .overlay(Color.black.opacity(0.35))
+            // MARK: - Dinamik Arka Plan
+            GeometryReader { geo in
+                if let bgImage = bgImage {
+                    Image(uiImage: bgImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                } else {
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.indigo.opacity(0.7), Color.purple.opacity(0.8), Color.black]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
+            .ignoresSafeArea()
 
-            if showModeSelector {
-                // Açılış Mod Seçim Ekranı (iOS Cam Efektli Card)
-                VStack(spacing: 22) {
-                    Text("KiraNori")
-                        .font(.system(size: 44, weight: .black, design: .rounded))
-                        .foregroundColor(.pink)
-                        .shadow(color: .pink.opacity(0.8), radius: 15)
-
-                    Text("Gelişmiş iOS Sistem & Emülasyon Suite")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.white.opacity(0.9))
-
-                    VStack(spacing: 14) {
-                        GlassButton(title: "Jailbreak Modu (Root Yetkisi)", icon: "lock.open.fill", color: .purple) {
-                            isJailbroken = true
-                            showModeSelector = false
+            // MARK: - Ana Arayüz (Taurine / Modern Glassmorphism)
+            VStack(spacing: 20) {
+                Spacer()
+                
+                // Başlık
+                VStack(spacing: 4) {
+                    Text("KiraNori Pro")
+                        .font(.system(size: 42, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+                    Text("Advanced iOS Virtualization & Tweak Suite")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                
+                // Ana Özellik Menü Kartları (Buzlu Cam)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        // 1. Windows x64 VM Emülatör (UTM Tarzı)
+                        MenuButton(
+                            title: "Windows 10 x64 Emülatör",
+                            subtitle: "QEMU / UTM Core Engine",
+                            icon: "desktopcomputer",
+                            color: selectedThemeColor
+                        ) {
+                            activeSheet = .vmManager
                         }
 
-                        GlassButton(title: "Jailbreaksiz Mod (Sandbox)", icon: "lock.fill", color: .pink) {
-                            isJailbroken = false
-                            showModeSelector = false
+                        // 2. Kapsamlı Dosya Yöneticisi (Tüm Dosyalar)
+                        MenuButton(
+                            title: "Gelişmiş Dosya Yöneticisi",
+                            subtitle: "Tüm Formatlar, IPA, ISO ve Payload",
+                            icon: "folder.fill.badge.gear",
+                            color: selectedThemeColor
+                        ) {
+                            activeSheet = .fileManager
+                        }
+
+                        // 3. JIT & Bellek Yönetimi
+                        MenuButton(
+                            title: "JIT Entegratörü & Debugger",
+                            subtitle: "Emülatörler İçin Performans Kilidi",
+                            icon: "cpu.fill",
+                            color: selectedThemeColor
+                        ) {
+                            activeSheet = .jitManager
+                        }
+
+                        // 4. Terminal & Script Çalıştırıcı
+                        MenuButton(
+                            title: "Root Terminal & Shell",
+                            subtitle: "Komut Satırı ve Özel Scriptler",
+                            icon: "terminal.fill",
+                            color: selectedThemeColor
+                        ) {
+                            activeSheet = .terminal
+                        }
+
+                        // 5. Tweak & Sys Tweaks
+                        MenuButton(
+                            title: "Tweak & System Patches",
+                            subtitle: "Gelişmiş Sistem Ayarları",
+                            icon: "bolt.shield.fill",
+                            color: selectedThemeColor
+                        ) {
+                            activeSheet = .tweakCenter
+                        }
+
+                        // 6. Tema ve Duvar Kağıdı
+                        MenuButton(
+                            title: "Görünüm & Duvar Kağıdı",
+                            subtitle: "Özel Kırpma ve Dinamik Renkler",
+                            icon: "paintpalette.fill",
+                            color: selectedThemeColor
+                        ) {
+                            activeSheet = .themes
                         }
                     }
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 20)
+                }
+                .frame(maxHeight: 340)
 
-                    // Credits Bölümü
-                    VStack(spacing: 6) {
-                        Text("CREDITS")
-                            .font(.caption2)
-                            .bold()
-                            .foregroundColor(.white.opacity(0.6))
+                // Ana Tetikleme Butonu
+                Button(action: {
+                    // Sistem tetikleyici
+                }) {
+                    Text("Execute Environment")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(16)
+                        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+                }
+                .padding(.horizontal, 24)
 
-                        HStack(spacing: 15) {
-                            Text("GitHub: @kirad0x").font(.caption).bold().foregroundColor(.cyan)
-                            Text("TikTok: @hello.imkira").font(.caption).bold().foregroundColor(.pink)
-                        }
+                Spacer()
+                
+                // Alt Bilgi / Ayarlar Simgesi
+                HStack {
+                    Button(action: { activeSheet = .settings }) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(12)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
                     }
-                    .padding(.top, 10)
+                    Spacer()
+                    Button(action: { activeSheet = .credits }) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(12)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
                 }
-                .padding(25)
-                .background(.ultraThinMaterial)
-                .cornerRadius(32)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 32)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1.5)
-                )
-                .shadow(color: Color.black.opacity(0.5), radius: 25, x: 0, y: 15)
-                .padding(20)
-                .onAppear { loadRandomWallpaper() }
-            } else {
-                // Ana Navigasyon (Tab Bar)
-                TabView(selection: $selectedTab) {
-                    WindowsEmulatorView()
-                        .tabItem { Label("Win Engine", systemImage: "desktopcomputer") }
-                        .tag(0)
-
-                    FileManagerView(isJailbroken: isJailbroken)
-                        .tabItem { Label("Dosyalar", systemImage: "folder.fill") }
-                        .tag(1)
-
-                    TerminalView(isJailbroken: isJailbroken)
-                        .tabItem { Label("Terminal", systemImage: "terminal.fill") }
-                        .tag(2)
-
-                    DownloaderView()
-                        .tabItem { Label("İndirici", systemImage: "square.and.arrow.down.fill") }
-                        .tag(3)
-
-                    MiniGamesView()
-                        .tabItem { Label("Arcade", systemImage: "gamecontroller.fill") }
-                        .tag(4)
-
-                    SettingsView(wallpaperBrightness: $wallpaperBrightness, currentWallpaper: $currentWallpaper, showModeSelector: $showModeSelector)
-                        .tabItem { Label("Ayarlar", systemImage: "gearshape.fill") }
-                        .tag(5)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 10)
+            }
+        }
+        // MARK: - Modül Yönlendirmeleri (Sheets)
+        .sheet(item: $activeSheet) { screen in
+            switch screen {
+            case .fileManager:
+                ComprehensiveFileManagerView(themeColor: selectedThemeColor)
+            case .vmManager:
+                WindowsVMManagerView(themeColor: selectedThemeColor)
+            case .terminal:
+                TerminalView()
+            case .tweakCenter:
+                TweakCenterView(enableTweaks: $enableTweaks, restoreRootFS: $restoreRootFS, themeColor: selectedThemeColor)
+            case .jitManager:
+                JITManagerView(themeColor: selectedThemeColor)
+            case .themes:
+                ThemesView(themeColor: $selectedThemeColor)
+            case .settings:
+                SettingsView(selectedItem: $selectedItem, bgImage: $bgImage, themeColor: $selectedThemeColor)
+            case .credits:
+                CreditsView()
+            }
+        }
+        .onChange(of: selectedItem) { newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                   let uiImg = UIImage(data: data) {
+                    await MainActor.run {
+                        self.rawImageToCrop = uiImg
+                        self.showCropSheet = true
+                    }
                 }
-                .accentColor(.pink)
+            }
+        }
+        .sheet(isPresented: $showCropSheet) {
+            if let rawImg = rawImageToCrop {
+                CropWallpaperView(imageToCrop: rawImg) { croppedImg in
+                    self.bgImage = croppedImg
+                    self.selectedThemeColor = .indigo
+                }
             }
         }
     }
-
-    func loadRandomWallpaper() {
-        let wallpapers = ["bg1", "bg2", "bg3", "bg4", "wallpaper_default"]
-        currentWallpaper = wallpapers.randomElement() ?? "wallpaper_default"
-    }
 }
 
-// MARK: - 2. CAM EFEKTLİ (LIQUID GLASS) YUMUŞATILMIŞ BUTON
-struct GlassButton: View {
+// MARK: - Özel Menü Buton Bileşeni
+struct MenuButton: View {
     let title: String
+    let subtitle: String
     let icon: String
     let color: Color
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 15) {
                 Image(systemName: icon)
-                    .font(.title3)
-                Text(title)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 18)
-            .foregroundColor(.white)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(color.opacity(0.55))
-                    .background(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-            )
-            .shadow(color: color.opacity(0.45), radius: 12, x: 0, y: 6)
-        }
-    }
-}
-
-// MARK: - 3. WINDOWS EMÜLATÖR & DOKUNMATİK JOYSTICK MODÜLÜ
-struct WindowsEmulatorView: View {
-    @State private var isFullScreen: Bool = false
-    @State private var showJoystick: Bool = false
-    @State private var isRunning: Bool = false
-    @State private var isoUrl: String = ""
-
-    var body: some View {
-        VStack(spacing: 15) {
-            // Kontrol Barı
-            HStack {
-                Text("KiraNori WinEngine")
-                    .font(.headline)
-                    .foregroundColor(.pink)
-
-                Spacer()
-
-                // Tam Ekran Aç/Kapa
-                Button(action: { isFullScreen.toggle() }) {
-                    Image(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                }
-
-                // Joystick Göster/Gizle
-                Button(action: { showJoystick.toggle() }) {
-                    Image(systemName: "gamecontroller.fill")
-                        .foregroundColor(showJoystick ? .green : .white)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                }
-            }
-            .padding(.horizontal)
-
-            if !isFullScreen {
-                TextField("ISO veya Disk İmaj Linki Girin...", text: $isoUrl)
-                    .padding(12)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(16)
-                    .foregroundColor(.white)
-                    .padding(.horizontal)
-            }
-
-            // Windows Ekranı ve Sanal Joystick Katmanı
-            ZStack {
-                RoundedRectangle(cornerRadius: isFullScreen ? 0 : 24, style: .continuous)
-                    .fill(Color.black)
-                    .frame(height: isFullScreen ? nil : 320)
-                    .overlay(
-                        VStack {
-                            if isRunning {
-                                VStack {
-                                    Image(systemName: "desktopcomputer")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(.cyan)
-                                    Text("Windows Sanal Makine Çalışıyor\n(JIT Aktif)")
-                                        .multilineTextAlignment(.center)
-                                        .foregroundColor(.white)
-                                        .bold()
-                                }
-                            } else {
-                                Text("Windows Kapalı\n'Başlat' Butonuna Basın")
-                                    .multilineTextAlignment(.center)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: isFullScreen ? 0 : 24)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                    )
-
-                // Dokunmatik Sanal Oyun Butonları
-                if showJoystick && isRunning {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            // Sol Analog Joystick
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 90, height: 90)
-                                .overlay(Circle().fill(Color.pink.opacity(0.7)).frame(width: 42, height: 42))
-                                .padding(.leading, 20)
-
-                            Spacer()
-
-                            // Sağ Oyun Butonları (A, B, X, Y)
-                            VStack(spacing: 8) {
-                                HStack(spacing: 12) {
-                                    GameButton(label: "Y", color: .yellow)
-                                }
-                                HStack(spacing: 18) {
-                                    GameButton(label: "X", color: .blue)
-                                    GameButton(label: "B", color: .red)
-                                }
-                                HStack(spacing: 12) {
-                                    GameButton(label: "A", color: .green)
-                                }
-                            }
-                            .padding(.trailing, 20)
-                        }
-                        .padding(.bottom, 25)
-                    }
-                }
-            }
-
-            if !isFullScreen {
-                GlassButton(
-                    title: isRunning ? "Windows'u Kapat" : "Windows'u Başlat (UTM Engine)",
-                    icon: "power",
-                    color: isRunning ? .red : .pink
-                ) {
-                    isRunning.toggle()
-                }
-                .padding(.horizontal)
-            }
-        }
-        .padding(.vertical)
-    }
-}
-
-struct GameButton: View {
-    let label: String
-    let color: Color
-
-    var body: some View {
-        Circle()
-            .fill(color.opacity(0.85))
-            .frame(width: 38, height: 38)
-            .overlay(Text(label).bold().foregroundColor(.white))
-            .shadow(color: color.opacity(0.5), radius: 6)
-    }
-}
-
-// MARK: - 4. DOSYA YÖNETİCİSİ MODÜLÜ (JAILBREAK / SANDBOX UYUMLU)
-struct FileManagerView: View {
-    let isJailbroken: Bool
-    @State private var currentPath: String = ""
-    @State private var files: [String] = []
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack {
-                Text("Dosya Yöneticisi")
-                    .font(.title2).bold()
-                    .foregroundColor(.pink)
-                Spacer()
-                Text(isJailbroken ? "Root / Kök" : "Sandbox")
-                    .font(.caption).bold()
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 10)
-                    .background(isJailbroken ? Color.purple : Color.gray)
+                    .font(.system(size: 22))
+                    .foregroundColor(color)
+                    .frame(width: 36, height: 36)
+                    .background(color.opacity(0.2))
                     .cornerRadius(10)
-                    .foregroundColor(.white)
-            }
 
-            Text("Dizin: \(currentPath)")
-                .font(.caption)
-                .foregroundColor(.gray)
-
-            List {
-                ForEach(files, id: \.self) { file in
-                    HStack {
-                        Image(systemName: file.contains(".") ? "doc.fill" : "folder.fill")
-                            .foregroundColor(file.contains(".") ? .cyan : .yellow)
-                        Text(file)
-                            .foregroundColor(.white)
-                    }
-                    .listRowBackground(Color.clear)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.6))
                 }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.4))
             }
-            .listStyle(PlainListStyle())
-            .background(.ultraThinMaterial)
-            .cornerRadius(20)
-        }
-        .padding()
-        .onAppear { loadDirectory() }
-    }
-
-    func loadDirectory() {
-        if isJailbroken {
-            currentPath = "/"
-            files = ["var", "System", "Library", "Applications", "private", "usr", "bin"]
-        } else {
-            currentPath = "/Documents"
-            files = ["Wallpapers", "Downloads", "ISO_Images", "Config.json"]
-        }
-    }
-}
-
-// MARK: - 5. KİRANORİ ANİME MIKU TERMINAL MODÜLÜ
-struct TerminalView: View {
-    let isJailbroken: Bool
-    @State private var inputCommand: String = ""
-    @State private var logs: [String] = ["KiraNori OS v2.6 Terminal Başlatıldı.", "MikuShell v1.0 hazır. Komut yazın (örn: help, sysinfo, neofetch)"]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("KiraNori Terminal")
-                .font(.title2).bold()
-                .foregroundColor(.pink)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(logs, id: \.self) { log in
-                        Text(log)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.green)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding()
-            .frame(maxHeight: .infinity)
-            .background(Color.black.opacity(0.85))
-            .cornerRadius(20)
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.green.opacity(0.4), lineWidth: 1))
-
-            HStack {
-                Text(">").foregroundColor(.green).bold()
-                TextField("Komut girin...", text: $inputCommand)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.white)
-                    .onSubmit { runCommand() }
-
-                Button("Gönder") { runCommand() }
-                    .foregroundColor(.pink)
-            }
-            .padding(12)
+            .padding(14)
             .background(.ultraThinMaterial)
             .cornerRadius(16)
         }
-        .padding()
-    }
-
-    func runCommand() {
-        guard !inputCommand.isEmpty else { return }
-        let cmd = inputCommand.lowercased().trimmingCharacters(in: .whitespaces)
-        logs.append("miku@kiranori:~$ \(inputCommand)")
-
-        switch cmd {
-        case "help":
-            logs.append("Mevcut Komutlar: help, sysinfo, neofetch, clear, jitsatus")
-        case "neofetch", "sysinfo":
-            logs.append("OS: KiraNori OS 2.6")
-            logs.append("Kernel: Darwin iOS")
-            logs.append("Mod: \(isJailbroken ? "Jailbroken (Root)" : "Sandbox")")
-        case "clear":
-            logs.removeAll()
-        case "jitstatus":
-            logs.append("JIT Servisi: Aktif (QEMU Sanallaştırma Hazır)")
-        default:
-            logs.append("Bilinmeyen komut: \(cmd)")
-        }
-        inputCommand = ""
     }
 }
 
-// MARK: - 6. AKILLI LİNK İNDİRİCİ & YÜKLEME TERCİHİ MODÜLÜ
-struct DownloaderView: View {
-    @State private var downloadLink: String = ""
-    @State private var downloadProgress: Double = 0.0
-    @State private var isDownloading: Bool = false
-    @State private var showAlert: Bool = false
-
+// MARK: - 1. Windows x64 VM Emülatör (UTM / QEMU Tarzı)
+struct WindowsVMManagerView: View {
+    var themeColor: Color
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var isRunning: Bool = false
+    @State private var ramAllocation: Double = 4.0 // GB
+    @State private var cpuCores: Int = 4
+    @State private var selectedISO: String = "Windows_10_x64.iso"
+    
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Paket & IPA İndirici")
-                .font(.title2).bold()
-                .foregroundColor(.pink)
-
-            TextField("Dosya/IPA İndirme Bağlantısı...", text: $downloadLink)
-                .padding(14)
-                .background(.ultraThinMaterial)
-                .cornerRadius(18)
-                .foregroundColor(.white)
-
-            GlassButton(title: "İndir ve İşle", icon: "arrow.down.circle.fill", color: .blue) {
-                startDownload()
-            }
-
-            if isDownloading {
-                ProgressView("İndiriliyor...", value: downloadProgress, total: 100.0)
-                    .accentColor(.pink)
-                    .foregroundColor(.white)
-                    .padding()
-            }
-
-            Spacer()
-        }
-        .padding()
-        .alert(isPresented: $showAlert) {
-            Alert(
-                title: Text("İndirme Tamamlandı!"),
-                message: Text("İndirilen paket cihazınıza yüklensin mi (install)?"),
-                primaryButton: .default(Text("Evet, Yükle")) {
-                    // Cihaza yükleme akışı
-                },
-                secondaryButton: .cancel(Text("Hayır, Sadece Sakla"))
-            )
-        }
-    }
-
-    func startDownload() {
-        isDownloading = true
-        downloadProgress = 0.0
-        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { timer in
-            downloadProgress += 20.0
-            if downloadProgress >= 100.0 {
-                timer.invalidate()
-                isDownloading = false
-                showAlert = true
-            }
-        }
-    }
-}
-
-// MARK: - 7. MINI MIKU ARCADE (EĞLENCE OYUNLARI)
-struct MiniGamesView: View {
-    @State private var score: Int = 0
-    @State private var timerCount: Int = 10
-    @State private var isGameActive: Bool = false
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("KiraNori Arcade")
-                .font(.title2).bold()
-                .foregroundColor(.pink)
-
-            VStack(spacing: 16) {
-                Text("Anime Reflex Tapper")
-                    .font(.headline)
-                    .foregroundColor(.white)
-
-                Text("Skor: \(score)")
-                    .font(.system(size: 38, weight: .black, design: .rounded))
-                    .foregroundColor(.yellow)
-
-                Text("Kalan Süre: \(timerCount)s")
-                    .foregroundColor(.gray)
-
-                Button(action: {
-                    if isGameActive {
-                        score += 1
-                    } else {
-                        startGame()
-                    }
-                }) {
-                    Circle()
-                        .fill(isGameActive ? Color.pink : Color.purple)
-                        .frame(width: 120, height: 120)
-                        .overlay(
-                            Text(isGameActive ? "TIKLA!" : "BAŞLAT")
-                                .font(.title3).bold()
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // VM Ekran / Konsol Görseli
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.gray.opacity(0.15))
+                                .frame(height: 200)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(themeColor.opacity(0.5), lineWidth: 1)
+                                )
+                            
+                            if isRunning {
+                                VStack(spacing: 8) {
+                                    ProgressView()
+                                        .tint(.white)
+                                    Text("Windows 10 x64 Booting...")
+                                        .font(.system(.subheadline, design: .monospaced))
+                                        .foregroundColor(.green)
+                                    Text("Architecture: x86_64 | RAM: \(Int(ramAllocation))GB | Cores: \(cpuCores)")
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(.gray)
+                                }
+                            } else {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "desktopcomputer")
+                                        .font(.system(size: 48))
+                                        .foregroundColor(themeColor)
+                                    Text("Sanal Makine Kapalı")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    Text("ISO Dosyası: \(selectedISO)")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                        
+                        // Kontrol Butonları
+                        HStack(spacing: 15) {
+                            Button(action: { isRunning.toggle() }) {
+                                HStack {
+                                    Image(systemName: isRunning ? "stop.fill" : "play.fill")
+                                    Text(isRunning ? "VM'i Kapat (Power Off)" : "Windows 10 Başlat")
+                                }
+                                .font(.bold(.body)())
                                 .foregroundColor(.white)
-                        )
-                        .shadow(color: .pink.opacity(0.6), radius: 15)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(isRunning ? Color.red : themeColor)
+                                .cornerRadius(12)
+                            }
+                        }
+
+                        // Donanım Yapılandırması
+                        VStack(alignment: .leading, spacing: 15) {
+                            Text("QEMU Donanım Ayarları (x64)")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            
+                            VStack(alignment: .leading) {
+                                Text("RAM Tahsisi: \(Int(ramAllocation)) GB")
+                                    .foregroundColor(.gray)
+                                Slider(value: $ramAllocation, in: 1...8, step: 1)
+                                    .accentColor(themeColor)
+                            }
+                            
+                            HStack {
+                                Text("CPU Çekirdek Sayısı")
+                                    .foregroundColor(.gray)
+                                Spacer()
+                                Picker("Cores", selection: $cpuCores) {
+                                    Text("2 Çekirdek").tag(2)
+                                    Text("4 Çekirdek").tag(4)
+                                    Text("6 Çekirdek").tag(6)
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                            }
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(16)
+                    }
+                    .padding()
                 }
             }
-            .padding(30)
-            .background(.ultraThinMaterial)
-            .cornerRadius(30)
-            .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.white.opacity(0.2), lineWidth: 1))
-
-            Spacer()
-        }
-        .padding()
-    }
-
-    func startGame() {
-        score = 0
-        timerCount = 10
-        isGameActive = true
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            if timerCount > 0 {
-                timerCount -= 1
-            } else {
-                timer.invalidate()
-                isGameActive = false
+            .navigationTitle("Windows 10 x64 VM")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Kapat") { dismiss() }.foregroundColor(themeColor)
+                }
             }
         }
     }
 }
 
-// MARK: - 8. AYARLAR VE WALLPAPER AYDINLATMA MODÜLÜ
-struct SettingsView: View {
-    @Binding var wallpaperBrightness: Double
-    @Binding var currentWallpaper: String
-    @Binding var showModeSelector: Bool
+// MARK: - 2. Kapsamlı Tüm Dosyaları Yöneten Dosya Yöneticisi
+struct ComprehensiveFileManagerView: View {
+    var themeColor: Color
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var fileList: [FileURLItem] = []
+    
+    struct FileURLItem: Identifiable {
+        let id = UUID()
+        let url: URL
+        let name: String
+        let size: String
+        let extensionType: String
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Ayarlar")
-                .font(.largeTitle).bold()
-                .foregroundColor(.pink)
-
-            VStack(alignment: .leading, spacing: 15) {
-                Text("Wallpaper Aydınlatması")
-                    .font(.headline)
-                    .foregroundColor(.white)
-
-                HStack {
-                    Image(systemName: "sun.min.fill").foregroundColor(.yellow)
-                    Slider(value: $wallpaperBrightness, in: 0.1...1.0)
-                        .accentColor(.pink)
-                    Image(systemName: "sun.max.fill").foregroundColor(.yellow)
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                List {
+                    if fileList.isEmpty {
+                        Text("Documents dizininde dosya bulunamadı.")
+                            .foregroundColor(.gray)
+                            .listRowBackground(Color.white.opacity(0.05))
+                    } else {
+                        ForEach(fileList) { item in
+                            HStack(spacing: 12) {
+                                Image(systemName: iconForExtension(item.extensionType))
+                                    .foregroundColor(themeColor)
+                                    .font(.title3)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.name)
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    Text("Boyut: \(item.size) | Tür: .\(item.extensionType.uppercased())")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                            .listRowBackground(Color.white.opacity(0.08))
+                        }
+                        .onDelete(perform: deleteFiles)
+                    }
                 }
-
-                Divider().background(Color.white.opacity(0.2))
-
-                Button(action: {
-                    let wallpapers = ["bg1", "bg2", "bg3", "bg4", "wallpaper_default"]
-                    currentWallpaper = wallpapers.randomElement() ?? "wallpaper_default"
-                }) {
-                    Label("Duvar Kağıdını Rastgele Değiştir", systemImage: "photo.on.rectangle.angled")
-                        .foregroundColor(.white)
-                }
-
-                Divider().background(Color.white.opacity(0.2))
-
-                Button(action: {
-                    showModeSelector = true
-                }) {
-                    Label("Mod Seçim Ekranına Dön", systemImage: "arrow.uturn.left.circle.fill")
-                        .foregroundColor(.pink)
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Tüm Dosya Yöneticisi")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }.foregroundColor(themeColor)
                 }
             }
-            .padding(20)
-            .background(.ultraThinMaterial)
-            .cornerRadius(26)
-            .overlay(RoundedRectangle(cornerRadius: 26).stroke(Color.white.opacity(0.2), lineWidth: 1))
-
-            Spacer()
+            .onAppear(perform: loadAllFiles)
         }
-        .padding()
+    }
+    
+    func iconForExtension(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "iso", "img": return "opticaldisc.fill"
+        case "ipa": return "app.badge.fill"
+        case "zip", "rar", "7z": return "doc.zipper"
+        case "txt", "log", "json": return "doc.text.fill"
+        default: return "doc.fill"
+        }
+    }
+    
+    func loadAllFiles() {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        if let contents = try? FileManager.default.contentsOfDirectory(at: docs, includingPropertiesForKeys: [.fileSizeKey]) {
+            fileList = contents.map { url in
+                let resources = try? url.resourceValues(forKeys: [.fileSizeKey])
+                let sizeBytes = resources?.fileSize ?? 0
+                let sizeString = ByteCountFormatter.string(fromByteCount: Int64(sizeBytes), countStyle: .file)
+                return FileURLItem(url: url, name: url.lastPathComponent, size: sizeString, extensionType: url.pathExtension)
+            }
+        }
+    }
+    
+    func deleteFiles(at offsets: IndexSet) {
+        for index in offsets {
+            let item = fileList[index]
+            try? FileManager.default.removeItem(at: item.url)
+        }
+        loadAllFiles()
+    }
+}
+
+// MARK: - 3. JIT Yöneticisi
+struct JITManagerView: View {
+    var themeColor: Color
+    @Environment(\.dismiss) var dismiss
+    @State private var jitStatus: String = "Aktif Edilmedi (Not Attached)"
+    
+    var body: SomeView {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                VStack(spacing: 20) {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 60))
+                        .foregroundColor(themeColor)
+                    
+                    Text("JIT Durumu: \(jitStatus)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Button(action: {
+                        jitStatus = "Bağlantı Kuruldu (JIT Enabled)"
+                    }) {
+                        Text("JIT'i Tetikle / Etkinleştir")
+                            .font(.bold(.body)())
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(themeColor)
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    
+                    Spacer()
+                }
+                .padding(.top, 40)
+            }
+            .navigationTitle("JIT Manager")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Kapat") { dismiss() }.foregroundColor(themeColor)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Diğer Yardımcı Görünümler (Tweak, Terminal, Themes vb.)
+struct TweakCenterView: View {
+    @Binding var enableTweaks: Bool
+    @Binding var restoreRootFS: Bool
+    var themeColor: Color
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                List {
+                    Toggle("Enable System Tweaks", isOn: $enableTweaks)
+                        .tint(themeColor)
+                    Toggle("Restore RootFS Safety Mode", isOn: $restoreRootFS)
+                        .tint(.red)
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Tweak Center")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+struct TerminalView: View {
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                ScrollView {
+                    Text("KiraNori:~ root# qemu-system-x86_64 -m 4G -cpu host\n[OK] Virtualization backend initialized.\n[OK] Windows x64 Disk image mounted successfully.")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.green)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                }
+            }
+            .navigationTitle("Root Terminal")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+struct ThemesView: View {
+    @Binding var themeColor: Color
+    @Environment(\.dismiss) var dismiss
+    let colors: [Color] = [.purple, .blue, .indigo, .pink, .green, .orange]
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 20) {
+                    ForEach(colors, id: \.self) { color in
+                        Circle().fill(color).frame(width: 50, height: 50)
+                            .onTapGesture { themeColor = color }
+                    }
+                }.padding()
+            }
+            .navigationTitle("Themes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+struct SettingsView: View {
+    @Binding var selectedItem: PhotosPickerItem?
+    @Binding var bgImage: UIImage?
+    @Binding var themeColor: Color
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                List {
+                    PhotosPicker(selection: $selectedItem, matching: .images) {
+                        Text("Özel Duvar Kağıdı Seç ve Kırp").foregroundColor(.white)
+                    }.listRowBackground(Color.white.opacity(0.1))
+                }.scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+struct CropWallpaperView: View {
+    let imageToCrop: UIImage
+    var onCrop: (UIImage) -> Void
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                VStack {
+                    Image(uiImage: imageToCrop).resizable().scaledToFit().padding()
+                    Button("Kırp ve Uygula") {
+                        onCrop(imageToCrop)
+                        dismiss()
+                    }.padding().background(Color.white).foregroundColor(.black).cornerRadius(10)
+                }
+            }.navigationTitle("Crop").navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+struct CreditsView: View {
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                Text("KiraNori Pro Suite\nGeliştirici: kirad0x").foregroundColor(.white).font(.headline)
+            }.navigationTitle("Credits").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        }
     }
 }
