@@ -1,0 +1,21 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.0'
+
+    - name: Build KiraNori iOS App
+      run: |
+        echo "KiraNori projesi macOS bulut sunucusunda derleniyor..."
+        xcodebuild -version
