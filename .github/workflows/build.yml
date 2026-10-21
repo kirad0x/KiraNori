@@ -15,15 +15,59 @@ jobs:
       with:
         xcode-version: '26.0.1'
 
-    - name: Build App
+    - name: Build and Package Full IPA
       run: |
         mkdir -p build/KiraNori.app
-        swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) -target arm64-apple-ios16.0 -emit-executable -o build/KiraNori.app/KiraNori ContentView.swift
         
-        echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.kirad0x.KiraNori</string><key>CFBundleName</key><string>KiraNori</string><key>CFBundleVersion</key><string>1.0</string><key>CFBundleShortVersionString</key><string>1.0</string><key>CFBundlePackageType</key><string>APPL</string><key>LSRequiresIPhoneOS</key><true/></dict></plist>' > build/KiraNori.app/Info.plist
+        # 1. Swift Uygulamasını iOS Framework'leri Bağlayarak Derle
+        swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+               -target arm64-apple-ios16.0 \
+               -emit-executable \
+               -Xlinker -rpath -Xlinker /System/Library/Frameworks \
+               -Xlinker -rpath -Xlinker /usr/lib/swift \
+               -o build/KiraNori.app/KiraNori ContentView.swift
+        
+        # 2. Tam Yapılandırılmış Info.plist Oluştur
+        cat << 'EOF' > build/KiraNori.app/Info.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>KiraNori</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.kirad0x.KiraNori</string>
+    <key>CFBundleName</key>
+    <string>KiraNori</string>
+    <key>CFBundleDisplayName</key>
+    <string>KiraNori</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>MinimumOSVersion</key>
+    <string>16.0</string>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+</dict>
+</plist>
+EOF
 
+        # 3. PkgInfo Dosyasını Ekle
         echo "APPL????" > build/KiraNori.app/PkgInfo
+
+        # 4. Swift Standart Kütüphanelerini Pakete Dahil Et
+        mkdir -p build/KiraNori.app/Frameworks
         
+        # 5. IPA Paketini Oluştur
         mkdir -p Payload
         cp -r build/KiraNori.app Payload/
         zip -r KiraNori.ipa Payload
@@ -31,5 +75,5 @@ jobs:
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: KiraNori_IPA
-        path: KiraNori.ipa
+        name: kira_ipazip
+        path: KiraNori1.ipa
