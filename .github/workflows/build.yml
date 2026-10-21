@@ -31,5 +31,5 @@ jobs:
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: KiraNori-IPA
+        name: KiraNori_IPA
         path: KiraNori.ipa
