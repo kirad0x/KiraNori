@@ -15,7 +15,17 @@ jobs:
       with:
         xcode-version: '15.0'
 
-    - name: Build KiraNori iOS App
+    - name: Build App for iOS
       run: |
-        echo "KiraNori projesi macOS bulut sunucusunda derleniyor..."
-        xcodebuild -version
+        echo "Proje derleniyor..."
+        xcodebuild -project KiraNori.xcodeproj -scheme KiraNori -sdk iphoneos -configuration Release archive -archivePath $PWD/build/KiraNori.xcarchive CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+        
+        mkdir -p Payload
+        mv $PWD/build/KiraNori.xcarchive/Products/Applications/*.app Payload/
+        zip -r KiraNori.ipa Payload/
+        
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: KiraNori-IPA
+        path: KiraNori.ipa
