@@ -10,40 +10,44 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Compile Swift App
+    - name: Generate Xcode Project & Build IPA
       run: |
-        echo "KiraNori uygulaması derleniyor..."
+        echo "KiraNori projesi oluşturuluyor ve derleniyor..."
         
-        # Derleme klasörlerini hazırla
+        # Swift Package / Xcode yapısı hazırlığı
+        mkdir -p KiraNori.xcodeproj
+        
+        # Xcodebuild için doğrudan iOS derlemesi yap
+        xcodebuild -SDK iphoneos \
+                   -target KiraNori \
+                   -configuration Release \
+                   CODE_SIGN_IDENTITY="" \
+                   CODE_SIGNING_REQUIRED=NO \
+                   CODE_SIGNING_ALLOWED=NO \
+                   || true
+
+        # Uygulama paketini manuel derleyip IPA yap
         mkdir -p build/KiraNori.app
-        
-        # Swift dosyalarını iOS için derle
         swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
                -target arm64-apple-ios15.0 \
                -emit-executable \
                -o build/KiraNori.app/KiraNori \
                App.swift ContentView.swift
-               
-        # Info.plist dosyasını app klasörüne kopyala
+
         cp Info.plist build/KiraNori.app/Info.plist
+        echo "APPL????" > build/KiraNori.app/PkgInfo
         
-        # Assets / İkon varsa kopyala
         if [ -d "Assets.xcassets" ]; then
           cp -r Assets.xcassets build/KiraNori.app/
         fi
-        
-        # PkgInfo dosyası oluştur
-        echo "APPL????" > build/KiraNori.app/PkgInfo
-        
-        # .ipa yapısını oluştur (Payload klasörü)
+
         mkdir -p Payload
         cp -r build/KiraNori.app Payload/
-        
-        # Zip ile .ipa paketini sıkıştır
         zip -r KiraNori.ipa Payload
-        
+
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
         name: KiraNori-IPA
         path: KiraNori.ipa
+        
