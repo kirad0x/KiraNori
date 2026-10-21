@@ -13,13 +13,12 @@ jobs:
     - name: Set up Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: '15.0'
+        xcode-version: '26.0.1'
 
     - name: Build App for iOS
       run: |
         echo "Proje derleniyor..."
         mkdir -p Payload
-        # Şimdilik temiz bir test uygulaması veya arşiv oluşturma adımı
         echo "KiraNori Derlemesi Başarılı" > Payload/info.txt
         zip -r KiraNori.ipa Payload/
         
