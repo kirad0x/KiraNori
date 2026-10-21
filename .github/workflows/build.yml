@@ -8,19 +8,39 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Set up Xcode
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: '26.0.1'
-
-    - name: Build App for iOS
+    - name: Compile Swift App
       run: |
-        echo "Proje derleniyor..."
+        echo "KiraNori uygulaması derleniyor..."
+        
+        # Derleme klasörlerini hazırla
+        mkdir -p build/KiraNori.app
+        
+        # Swift dosyalarını iOS için derle
+        swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+               -target arm64-apple-ios15.0 \
+               -emit-executable \
+               -o build/KiraNori.app/KiraNori \
+               App.swift ContentView.swift
+               
+        # Info.plist dosyasını app klasörüne kopyala
+        cp Info.plist build/KiraNori.app/Info.plist
+        
+        # Assets / İkon varsa kopyala
+        if [ -d "Assets.xcassets" ]; then
+          cp -r Assets.xcassets build/KiraNori.app/
+        fi
+        
+        # PkgInfo dosyası oluştur
+        echo "APPL????" > build/KiraNori.app/PkgInfo
+        
+        # .ipa yapısını oluştur (Payload klasörü)
         mkdir -p Payload
-        echo "KiraNori Derlemesi Başarılı" > Payload/info.txt
-        zip -r KiraNori.ipa Payload/
+        cp -r build/KiraNori.app Payload/
+        
+        # Zip ile .ipa paketini sıkıştır
+        zip -r KiraNori.ipa Payload
         
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
